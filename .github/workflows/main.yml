@@ -1,0 +1,17 @@
+name: Caprover Prod deployment
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: AlexxNB/caprover-action@v1
+        with:
+          server: 'https://captain.cloud.zipidy.org'
+          password: '${{ secrets.CAPROVER_PASSWORD }}'
+          appname: 'one-point-map'
+          branch: 'main'
