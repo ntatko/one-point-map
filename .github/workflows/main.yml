@@ -5,13 +5,35 @@ on:
     branches: [ main ]
 
 jobs:
-  push:
+  build:
+    env:
+      HEROKU_REGISTRY: registry.heroku.com
+      HEROKU_APP: one-point-map
+      HEROKU_USERNAME: ${{ secrets.HEROKU_USERNAME }}
+      HEROKU_PASSWORD: ${{ secrets.HEROKU_PASSWORD }}
+    # The type of runner that the job will run on
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
-      - uses: AlexxNB/caprover-action@v1
-        with:
-          server: 'https://captain.cloud.zipidy.org'
-          password: '${{ secrets.CAPROVER_PASSWORD }}'
-          appname: 'one-point-map'
-          branch: 'main'
+    - uses: actions/checkout@v2
+
+    - name: login to heroku
+      env:
+        HEROKU_USERNAME: ${{ secrets.HEROKU_USERNAME }}
+        HEROKU_PASSWORD: ${{ secrets.HEROKU_PASSWORD }}
+      run: |
+        echo "machine api.heroku.com" > ~/.netrc
+        echo "  login $HEROKU_USERNAME" >> ~/.netrc
+        echo "  password $HEROKU_PASSWORD" >> ~/.netrc
+        cat ~/.netrc
+        echo $HEROKU_PASSWORD | docker login $HEROKU_REGISTRY -u $HEROKU_USERNAME --password-stdin
+    
+    - name: build the docker image
+      run: docker build -t $HEROKU_REGISTRY/$HEROKU_APP:$GITHUB_SHA -t $HEROKU_REGISTRY/$HEROKU_APP:latest .
+
+    - name: push the docker image to heroku
+      run: |
+        heroku container:push -a $HEROKU_APP web
+        docker push $HEROKU_REGISTRY/$HEROKU_APP:$GITHUB_SHA
+        docker push $HEROKU_REGISTRY/$HEROKU_APP:latest
+        heroku container:release web -a $HEROKU_APP
